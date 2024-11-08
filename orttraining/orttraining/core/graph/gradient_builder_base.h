@@ -120,6 +120,7 @@ class GradientBuilderBase {
 
   // i-th output of forward op
   ArgDef O(const size_t i, bool record_stashing = true) const {
+    LOGS(logger_, INFO) << "jag " << i <<  node_->OutputDefs().size() ;
     ORT_ENFORCE(i < node_->OutputDefs().size());
 
     const std::string& name = node_->OutputDefs()[i]->Name();
