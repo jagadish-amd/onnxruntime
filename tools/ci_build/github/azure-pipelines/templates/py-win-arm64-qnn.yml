@@ -7,7 +7,7 @@ parameters:
 - name: QNN_SDK
   displayName: QNN SDK Version
   type: string
-  default: 2.27.0.240926
+  default: 2.31.0.250130
 
 - name: ENV_SETUP_SCRIPT
   type: string
@@ -59,6 +59,11 @@ jobs:
           addToPath: true
           architecture: 'arm64'
 
+      - task: PipAuthenticate@1
+        displayName: 'Pip Authenticate'
+        inputs:
+          artifactFeeds: 'Lotus'
+
       - task: onebranch.pipeline.tsaoptions@1
         displayName: 'OneBranch TSAOptions'
         inputs:
@@ -89,10 +94,11 @@ jobs:
             --build_dir $(Build.BinariesDirectory)
             --skip_submodule_sync
             --cmake_generator "$(VSGenerator)"
+            --build_shared_lib
             --use_qnn
             --qnn_home $(QnnSDKRootDir)
             --enable_pybind
-            --parallel --update
+            --parallel --use_vcpkg --update
             $(TelemetryOption) ${{ parameters.BUILD_PY_PARAMETERS }}
           workingDirectory: '$(Build.BinariesDirectory)'
 
