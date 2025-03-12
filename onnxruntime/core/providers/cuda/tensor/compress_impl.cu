@@ -16,6 +16,9 @@
 #include <thrust/functional.h>
 #include <thrust/iterator/transform_iterator.h>
 
+#ifdef USE_ROCM
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 namespace onnxruntime {
 namespace cuda {
 
