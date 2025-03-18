@@ -1159,6 +1159,8 @@ def generate_build_tree(
         cmake_args.append("-Donnxruntime_ROCM_VERSION=" + args.rocm_version)
         if args.rocm_gfx_arch:
             cmake_args.append("-DCMAKE_HIP_ARCHITECTURES=" + args.rocm_gfx_arch)
+        add_default_definition(cmake_extra_defines, "CMAKE_CXX_COMPILER", f"{rocm_home}/llvm/bin/clang++")
+        add_default_definition(cmake_extra_defines, "CMAKE_C_COMPILER", f"{rocm_home}/llvm/bin/clang")
     if args.use_tensorrt:
         cmake_args.append("-Donnxruntime_TENSORRT_HOME=" + tensorrt_home)
 
