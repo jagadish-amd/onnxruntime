@@ -1,22 +1,38 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e90f893de..1a511bc56 100644
+index e90f893de..42d787aa3 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -333,27 +333,6 @@ set(CMAKE_HIP_COMPILER ${CMAKE_CXX_COMPILER})
+@@ -190,7 +190,14 @@ endif()
+ rocm_check_target_ids(SUPPORTED_GPU_TARGETS
+         TARGETS ${CK_GPU_TARGETS})
+
+-message("Building CK for the following targets: ${SUPPORTED_GPU_TARGETS}")
++if("${SUPPORTED_GPU_TARGETS}" STREQUAL "")
++    message("SUPPORTED_GPU_TARGETS is empty, manually set it.")
++    set(SUPPORTED_GPU_TARGETS ${GPU_TARGETS})
++    message("Building CK for the following targets: ${SUPPORTED_GPU_TARGETS}")
++else()
++    message("SUPPORTED_GPU_TARGETS is not empty")
++    message("Building CK for the following targets: ${SUPPORTED_GPU_TARGETS}")
++endif()
+
+ if (SUPPORTED_GPU_TARGETS MATCHES "gfx9")
+     message("Enabling XDL instances")
+@@ -333,27 +340,6 @@ set(CMAKE_HIP_COMPILER ${CMAKE_CXX_COMPILER})
  set(CMAKE_HIP_EXTENSIONS ON)
  message("CMAKE_HIP_COMPILER: ${CMAKE_HIP_COMPILER}")
 
 -## OpenMP
 -if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
--	# workaround issue hipcc in rocm3.5 cannot find openmp
--	set(OpenMP_CXX "${CMAKE_CXX_COMPILER}")
--	set(OpenMP_CXX_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
--	set(OpenMP_CXX_LIB_NAMES "libomp" "libgomp" "libiomp5")
--	set(OpenMP_libomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
--	set(OpenMP_libgomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
--	set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+-       # workaround issue hipcc in rocm3.5 cannot find openmp
+-       set(OpenMP_CXX "${CMAKE_CXX_COMPILER}")
+-       set(OpenMP_CXX_FLAGS "-fopenmp=libomp -Wno-unused-command-line-argument")
+-       set(OpenMP_CXX_LIB_NAMES "libomp" "libgomp" "libiomp5")
+-       set(OpenMP_libomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+-       set(OpenMP_libgomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+-       set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
 -else()
--	find_package(OpenMP REQUIRED)
+-       find_package(OpenMP REQUIRED)
 -endif()
 -
 -message("OpenMP_CXX_LIB_NAMES: ${OpenMP_CXX_LIB_NAMES}")
@@ -30,7 +46,7 @@ index e90f893de..1a511bc56 100644
  ## HIP
  # Override HIP version in config.h, if necessary.
  # The variables set by find_package() can't be overwritten,
-@@ -374,12 +353,6 @@ if( DEFINED CK_OVERRIDE_HIP_VERSION_PATCH )
+@@ -374,12 +360,6 @@ if( DEFINED CK_OVERRIDE_HIP_VERSION_PATCH )
      message(STATUS "CK_HIP_VERSION_PATCH overriden with ${CK_OVERRIDE_HIP_VERSION_PATCH}")
  endif()
  message(STATUS "Build with HIP ${HIP_VERSION}")
@@ -43,7 +59,7 @@ index e90f893de..1a511bc56 100644
 
  ## tidy
  include(EnableCompilerWarnings)
-@@ -655,10 +628,3 @@ rocm_install(FILES
+@@ -655,10 +635,3 @@ rocm_install(FILES
  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
  set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
@@ -123,3 +139,37 @@ index 3acdb4d87..cc26e184f 100644
 +#define hip_check_error HIP_CHECK_ERROR
 +#endif
 +
+diff --git a/library/src/tensor_operation_instance/gpu/CMakeLists.txt b/library/src/tensor_operation_instance/gpu/CMakeLists.txt
+index 5b88d5f25..880b129a0 100755
+--- a/library/src/tensor_operation_instance/gpu/CMakeLists.txt
++++ b/library/src/tensor_operation_instance/gpu/CMakeLists.txt
+@@ -130,6 +130,7 @@ function(add_instance_library INSTANCE_NAME)
+                     string(APPEND offload_targets "--offload-arch=${target} ")
+             endforeach()
+             set_source_files_properties(${source} PROPERTIES COMPILE_FLAGS ${offload_targets})
++            set_source_files_properties(${source} PROPERTIES LANGUAGE HIP)
+             list(APPEND INST_OBJ ${source})
+         endforeach()
+         add_library(${INSTANCE_NAME} OBJECT ${INST_OBJ})
+@@ -158,6 +159,7 @@ function(add_instance_library INSTANCE_NAME)
+             target_compile_options(${INSTANCE_NAME} PRIVATE --offload-compress)
+         endif()
+
++       target_compile_definitions(${INSTANCE_NAME} PRIVATE "__HIP_PLATFORM_AMD__=1" "__HIP_PLATFORM_HCC__=1")
+         set_target_properties(${INSTANCE_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+         clang_tidy_check(${INSTANCE_NAME})
+         set(result 0)
+diff --git a/library/src/tensor_operation_instance/gpu/mha/CMakeLists.txt b/library/src/tensor_operation_instance/gpu/mha/CMakeLists.txt
+index 0457588ea..dba71c13c 100644
+--- a/library/src/tensor_operation_instance/gpu/mha/CMakeLists.txt
++++ b/library/src/tensor_operation_instance/gpu/mha/CMakeLists.txt
+@@ -1,6 +1,6 @@
+ set(FMHA_CPP_FOLDER ${CMAKE_CURRENT_BINARY_DIR})
+-set(FMHA_SRC_FOLDER ${CMAKE_SOURCE_DIR}/example/ck_tile/01_fmha/)
+-set(CK_TILE_SRC_FOLDER ${CMAKE_SOURCE_DIR}/include/ck_tile/)
++set(FMHA_SRC_FOLDER ${PROJECT_SOURCE_DIR}/example/ck_tile/01_fmha/)
++set(CK_TILE_SRC_FOLDER ${PROJECT_SOURCE_DIR}/include/ck_tile/)
+
+ # Usage: for customized Python location cmake -DCK_USE_ALTERNATIVE_PYTHON="/opt/Python-3.8.13/bin/python3.8"
+ # CK Codegen requires dataclass which is added in Python 3.7
+
