@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e90f893de..42d787aa3 100644
+index e90f893de..3b642f6e3 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -190,7 +190,14 @@ endif()
@@ -18,10 +18,11 @@ index e90f893de..42d787aa3 100644
 
  if (SUPPORTED_GPU_TARGETS MATCHES "gfx9")
      message("Enabling XDL instances")
-@@ -333,27 +340,6 @@ set(CMAKE_HIP_COMPILER ${CMAKE_CXX_COMPILER})
+@@ -332,54 +339,7 @@ set(CMAKE_HIP_PLATFORM amd)
+ set(CMAKE_HIP_COMPILER ${CMAKE_CXX_COMPILER})
  set(CMAKE_HIP_EXTENSIONS ON)
  message("CMAKE_HIP_COMPILER: ${CMAKE_HIP_COMPILER}")
-
+-
 -## OpenMP
 -if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 -       # workaround issue hipcc in rocm3.5 cannot find openmp
@@ -43,12 +44,25 @@ index e90f893de..42d787aa3 100644
 -link_libraries(${OpenMP_gomp_LIBRARY})
 -link_libraries(${OpenMP_pthread_LIBRARY})
 -
- ## HIP
- # Override HIP version in config.h, if necessary.
- # The variables set by find_package() can't be overwritten,
-@@ -374,12 +360,6 @@ if( DEFINED CK_OVERRIDE_HIP_VERSION_PATCH )
-     message(STATUS "CK_HIP_VERSION_PATCH overriden with ${CK_OVERRIDE_HIP_VERSION_PATCH}")
- endif()
+-## HIP
+-# Override HIP version in config.h, if necessary.
+-# The variables set by find_package() can't be overwritten,
+-# therefore let's use intermediate variables.
+-set(CK_HIP_VERSION_MAJOR "${HIP_VERSION_MAJOR}")
+-set(CK_HIP_VERSION_MINOR "${HIP_VERSION_MINOR}")
+-set(CK_HIP_VERSION_PATCH "${HIP_VERSION_PATCH}")
+-if( DEFINED CK_OVERRIDE_HIP_VERSION_MAJOR )
+-    set(CK_HIP_VERSION_MAJOR "${CK_OVERRIDE_HIP_VERSION_MAJOR}")
+-    message(STATUS "CK_HIP_VERSION_MAJOR overriden with ${CK_OVERRIDE_HIP_VERSION_MAJOR}")
+-endif()
+-if( DEFINED CK_OVERRIDE_HIP_VERSION_MINOR )
+-    set(CK_HIP_VERSION_MINOR "${CK_OVERRIDE_HIP_VERSION_MINOR}")
+-    message(STATUS "CK_HIP_VERSION_MINOR overriden with ${CK_OVERRIDE_HIP_VERSION_MINOR}")
+-endif()
+-if( DEFINED CK_OVERRIDE_HIP_VERSION_PATCH )
+-    set(CK_HIP_VERSION_PATCH "${CK_OVERRIDE_HIP_VERSION_PATCH}")
+-    message(STATUS "CK_HIP_VERSION_PATCH overriden with ${CK_OVERRIDE_HIP_VERSION_PATCH}")
+-endif()
  message(STATUS "Build with HIP ${HIP_VERSION}")
 -link_libraries(hip::device)
 -if(CK_hip_VERSION VERSION_GREATER_EQUAL 6.0.23494)
@@ -59,7 +73,7 @@ index e90f893de..42d787aa3 100644
 
  ## tidy
  include(EnableCompilerWarnings)
-@@ -655,10 +635,3 @@ rocm_install(FILES
+@@ -655,10 +615,3 @@ rocm_install(FILES
  set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
  set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
@@ -70,77 +84,8 @@ index e90f893de..42d787aa3 100644
 -    LDCONFIG
 -    HEADER_ONLY
 -)
-diff --git a/include/ck/host_utility/hip_check_error.hpp b/include/ck/host_utility/hip_check_error.hpp
-index c0894f1d7..0f3561a4f 100644
---- a/include/ck/host_utility/hip_check_error.hpp
-+++ b/include/ck/host_utility/hip_check_error.hpp
-@@ -6,19 +6,7 @@
- #include <sstream>
- #include <hip/hip_runtime.h>
-
--// To be removed, which really does not tell the location of failed HIP functional call
--inline void hip_check_error(hipError_t x)
--{
--    if(x != hipSuccess)
--    {
--        std::ostringstream ss;
--        ss << "HIP runtime error: " << hipGetErrorString(x) << ". "
--           << "hip_check_error.hpp"
--           << ": " << __LINE__ << "in function: " << __func__;
--        throw std::runtime_error(ss.str());
--    }
--}
--
-+#ifndef HIP_CHECK_ERROR
- #define HIP_CHECK_ERROR(retval_or_funcall)                                 \
-     do                                                                     \
-     {                                                                      \
-@@ -32,3 +20,7 @@ inline void hip_check_error(hipError_t x)
-             throw std::runtime_error(ostr.str());                          \
-         }                                                                  \
-     } while(0)
-+#endif
-+#ifndef hip_check_error
-+#define hip_check_error HIP_CHECK_ERROR
-+#endif
-diff --git a/include/ck_tile/host/hip_check_error.hpp b/include/ck_tile/host/hip_check_error.hpp
-index 3acdb4d87..cc26e184f 100644
---- a/include/ck_tile/host/hip_check_error.hpp
-+++ b/include/ck_tile/host/hip_check_error.hpp
-@@ -8,20 +8,7 @@
- #include <stdexcept>
- #include <hip/hip_runtime.h>
-
--namespace ck_tile {
--// To be removed, which really does not tell the location of failed HIP functional call
--CK_TILE_HOST void hip_check_error(hipError_t x)
--{
--    if(x != hipSuccess)
--    {
--        std::ostringstream ss;
--        ss << "HIP runtime error: " << hipGetErrorString(x) << ". " << __FILE__ << ": " << __LINE__
--           << "in function: " << __func__;
--        throw std::runtime_error(ss.str());
--    }
--}
--} // namespace ck_tile
--
-+#ifndef HIP_CHECK_ERROR
- #define HIP_CHECK_ERROR(retval_or_funcall)                                         \
-     do                                                                             \
-     {                                                                              \
-@@ -34,3 +21,9 @@ CK_TILE_HOST void hip_check_error(hipError_t x)
-             throw std::runtime_error(ostr.str());                                  \
-         }                                                                          \
-     } while(0)
-+#endif
-+
-+#ifndef hip_check_error
-+#define hip_check_error HIP_CHECK_ERROR
-+#endif
-+
 diff --git a/library/src/tensor_operation_instance/gpu/CMakeLists.txt b/library/src/tensor_operation_instance/gpu/CMakeLists.txt
-index 5b88d5f25..880b129a0 100755
+index 5b88d5f25..900ac888e 100755
 --- a/library/src/tensor_operation_instance/gpu/CMakeLists.txt
 +++ b/library/src/tensor_operation_instance/gpu/CMakeLists.txt
 @@ -130,6 +130,7 @@ function(add_instance_library INSTANCE_NAME)
