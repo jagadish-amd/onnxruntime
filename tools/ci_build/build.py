@@ -2001,7 +2001,7 @@ def build_targets(args, cmake_path, build_dir, configs, num_parallel_jobs, targe
     for config in configs:
         log.info("Building targets for %s configuration", config)
         build_dir2 = get_config_build_dir(build_dir, config)
-        cmd_args = [cmake_path, "--build", build_dir2, "--config", config]
+        cmd_args = [cmake_path, "--build", build_dir2, "--config", config, "--verbose"]
         if target:
             cmd_args.extend(["--target", target])
 
